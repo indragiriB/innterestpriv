@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "561876262974",
+    "project_id": "innterest-6d320",
+    "storage_bucket": "innterest-6d320.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:561876262974:android:92a9b9480826525b72f16f",
+        "android_client_info": {
+          "package_name": "com.example.innterest"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAU6ESqzHAJWjMT3DVUHCe5t10tKDlVp_g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
