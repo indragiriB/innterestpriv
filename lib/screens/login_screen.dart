@@ -22,8 +22,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _focusEmail = FocusNode();
   final _focusPassword = FocusNode();
 
-  bool _isProcessing = false;
-
   Future<FirebaseApp> _initializeFirebase() async {
     FirebaseApp firebaseApp = await Firebase.initializeApp();
 
@@ -60,7 +58,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(width: 20),
                 const Text(
-                  "Take you to innterest..",
+                  "Taking u <3",
                   style: TextStyle(color: Colors.white),
                 ),
               ],
@@ -69,12 +67,13 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       },
     );
-  }
 
-  void _hideLoadingDialog() {
-    if (Navigator.canPop(context)) {
-      Navigator.pop(context);
-    }
+    // Auto-dismiss the dialog after 1.5 seconds
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+    });
   }
 
   @override
@@ -193,10 +192,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
                                           if (_formKey.currentState!
                                               .validate()) {
-                                            setState(() {
-                                              _isProcessing = true;
-                                            });
-                                            _showLoadingDialog();
+                                            _showLoadingDialog(); // Show loading dialog
+
+                                            // Simulate loading delay
+                                            await Future.delayed(const Duration(
+                                                milliseconds: 1500));
 
                                             User? user =
                                                 await FirebaseAuthHelper
@@ -207,7 +207,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                             );
 
                                             if (user != null) {
-                                              _hideLoadingDialog(); // Pastikan dialog di-hide sebelum navigasi
                                               Navigator.of(context)
                                                   .pushReplacement(
                                                 MaterialPageRoute(
@@ -216,26 +215,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                                 ),
                                               );
                                             } else {
-                                              _hideLoadingDialog(); // Hide dialog jika login gagal
                                               ScaffoldMessenger.of(context)
                                                   .showSnackBar(
                                                 const SnackBar(
                                                     content:
                                                         Text('Login failed')),
-                                              );
-                                            }
-
-                                            setState(() {
-                                              _isProcessing = false;
-                                            });
-
-                                            if (user != null) {
-                                              Navigator.of(context)
-                                                  .pushReplacement(
-                                                MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      HomeScreen(user: user),
-                                                ),
                                               );
                                             }
                                           }

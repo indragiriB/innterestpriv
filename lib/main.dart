@@ -1,71 +1,97 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Import Firebase Auth
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'screens/intro_screen.dart';
 import 'screens/login_screen.dart';
-import 'screens/home_screen.dart'; // Pastikan Anda membuat HomeScreen
+import 'screens/home_screen.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
+  Future<bool> _initializeFirebase() async {
+    await Firebase.initializeApp();
+    return true;
+  }
+
+  Future<bool> _hasSeenIntro() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('intro_seen') ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'innterest',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        fontFamily: 'Lato',
-        primarySwatch: Colors.blue,
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            textStyle: const TextStyle(
-              fontSize: 24.0,
+    return FutureBuilder<bool>(
+      future: _initializeFirebase(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const MaterialApp(
+            home: Scaffold(
+              body: Center(
+                child: CircularProgressIndicator(),
+              ),
             ),
-            padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 8.0),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return const MaterialApp(
+            home: Scaffold(
+              body: Center(
+                child: Text("Failed to initialize Firebase"),
+              ),
+            ),
+          );
+        }
+
+        return MaterialApp(
+          title: 'innterest',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            brightness: Brightness.dark,
+            fontFamily: 'Lato',
+            // scaffoldBackgroundColor: Color.fromARGB(255, 53, 53, 53),
           ),
-        ),
-        textTheme: TextTheme(
-          headlineLarge: TextStyle(
-            fontSize: 46.0,
-            color: Colors.blue.shade700,
-            fontWeight: FontWeight.w500,
+          routes: {
+            '/home': (context) =>
+                HomeScreen(user: FirebaseAuth.instance.currentUser!),
+            '/intro': (context) => const IntroScreen(),
+            '/login': (context) => const LoginScreen(),
+          },
+          home: StreamBuilder<User?>(
+            stream: FirebaseAuth.instance.authStateChanges(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              final User? user = snapshot.data;
+              if (user == null) {
+                return const LoginScreen();
+              }
+
+              return FutureBuilder<bool>(
+                future: _hasSeenIntro(),
+                builder: (context, introSnapshot) {
+                  if (introSnapshot.connectionState ==
+                      ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (introSnapshot.hasData && introSnapshot.data == true) {
+                    return HomeScreen(user: user);
+                  }
+                  return const IntroScreen();
+                },
+              );
+            },
           ),
-          bodyLarge: const TextStyle(fontSize: 18.0),
-        ),
-        scaffoldBackgroundColor: Colors.black,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.black,
-        ),
-        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-          backgroundColor: Colors.grey,
-          selectedItemColor: Colors.red,
-          unselectedItemColor: Colors.white70,
-        ),
-      ),
-      home: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance
-            .authStateChanges(), // Mendengarkan perubahan status autentikasi
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.active) {
-            final User? user = snapshot.data;1
-            if (user != null) {
-              return HomeScreen(
-                  user: user); // Arahkan ke HomeScreen dengan user
-            } else {
-              return const LoginScreen(); // Tampilkan LoginScreen jika belum login
-            }
-          }
-          return const Center(
-              child:
-                  CircularProgressIndicator()); // Tampilkan loader saat menunggu
-        },
-      ),
+        );
+      },
     );
   }
 }

@@ -8,6 +8,8 @@ import 'package:innterest/screens/comment_screen.dart';
 import 'package:innterest/screens/saved_posts_screen.dart';
 import 'package:innterest/screens/profile_screen.dart';
 import 'package:innterest/screens/upload_screen.dart';
+import 'package:innterest/screens/message_screen.dart';
+import 'package:innterest/screens/search_screen.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:async/async.dart';
 
@@ -22,6 +24,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen>
     with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
   TextEditingController _descriptionController = TextEditingController();
   final DatabaseReference _postsRef =
       FirebaseDatabase.instance.ref().child('posts');
@@ -325,6 +329,73 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
+  Future<bool> _isFollowing(String userId) async {
+    try {
+      final uid = widget.user.uid;
+      final snapshot = await FirebaseDatabase.instance
+          .ref()
+          .child('users')
+          .child(uid)
+          .child('following')
+          .child(userId)
+          .get();
+      return snapshot.exists;
+    } catch (e) {
+      print("Error checking following status: $e");
+      return false;
+    }
+  }
+
+  Future<void> _followUser(String userId) async {
+    try {
+      final uid = widget.user.uid;
+      final ref = FirebaseDatabase.instance.ref();
+
+      // Add to the following list of the current user
+      await ref
+          .child('users')
+          .child(uid)
+          .child('following')
+          .child(userId)
+          .set(true);
+
+      // Add to the followers list of the target user
+      await ref
+          .child('users')
+          .child(userId)
+          .child('followers')
+          .child(uid)
+          .set(true);
+    } catch (e) {
+      print("Error following user: $e");
+    }
+  }
+
+  Future<void> _unfollowUser(String userId) async {
+    try {
+      final uid = widget.user.uid;
+      final ref = FirebaseDatabase.instance.ref();
+
+      // Remove from the following list of the current user
+      await ref
+          .child('users')
+          .child(uid)
+          .child('following')
+          .child(userId)
+          .remove();
+
+      // Remove from the followers list of the target user
+      await ref
+          .child('users')
+          .child(userId)
+          .child('followers')
+          .child(uid)
+          .remove();
+    } catch (e) {
+      print("Error unfollowing user: $e");
+    }
+  }
+
   Future<void> _editPost(String postId, String newCaption) async {
     try {
       await _postsRef.child(postId).update({'caption': newCaption});
@@ -338,18 +409,20 @@ class _HomeScreenState extends State<HomeScreen>
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
+
     if (hour >= 4 && hour < 10) {
-      return 'Good morning'; // 04:00 - 09:59
+      return 'Good morning.'; // 04:00 - 09:59
     } else if (hour >= 10 && hour < 15) {
-      return 'Good afternoon'; // 10:00 - 14:59
+      return 'Good afternoon.'; // 10:00 - 14:59
     } else if (hour >= 15 && hour < 18) {
-      return 'Good evening'; // 15:00 - 17:59
+      return 'Good evening.'; // 15:00 - 17:59
     } else if (hour >= 18 && hour < 22) {
-      return 'Good night'; // 18:00 - 21:59
+      return 'Good night.'; // 18:00 - 21:59
     } else {
-      return 'Good night, sleep well'; // 22:00 - 03:59
+      return 'Sleep well.'; // 22:00 - 03:59
     }
   }
+
 // Inside the _HomeScreenState class
 
   String _getTimeAgo(int timestamp) {
@@ -371,11 +444,6 @@ class _HomeScreenState extends State<HomeScreen>
     setState(() {
       _selectedIndex = index;
     });
-    _pageController.animateToPage(
-      index,
-      duration: Duration(milliseconds: 10),
-      curve: Curves.easeInOut,
-    );
   }
 
   @override
@@ -445,18 +513,19 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Call super to maintain state
     final List<Widget> pages = [
       Scaffold(
+        backgroundColor: Color.fromARGB(255, 53, 53, 53),
         appBar: AppBar(
           toolbarHeight: 80,
           automaticallyImplyLeading: false,
           flexibleSpace: Container(
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  Color.fromARGB(255, 32, 32, 32), // Start color
-                  Color.fromARGB(
-                      255, 20, 20, 20), // End color (adjust as needed)
+                  Color.fromARGB(255, 21, 21, 21),
+                  Color.fromARGB(255, 21, 21, 21),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -466,31 +535,16 @@ class _HomeScreenState extends State<HomeScreen>
           title: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 1.0),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment
-                  .start, // Aligns children to the start (left)
+              mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                const Padding(
-                  padding: EdgeInsets.only(
-                      right: 10.0), // Adjusts space between image and text
-                  child: CircleAvatar(
-                    backgroundImage: AssetImage(
-                        'assets/images/innterest.png'), // Asset image
-                    radius: 20,
-                    backgroundColor:
-                        Color.fromARGB(167, 54, 53, 53), // Background color
-                  ),
-                ),
-                Expanded(
-                  child: Text(
-                    '${_getGreeting()}, ${widget.user.displayName ?? 'User'}!',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      color: Colors.white,
-                      fontFamily: 'Lobster',
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+                // const Padding(
+                //   padding: EdgeInsets.only(right: 10.0),
+                //   child: CircleAvatar(
+                //     backgroundImage: AssetImage('assets/images/innterest.png'),
+                //     radius: 20,
+                //     backgroundColor: Color.fromARGB(167, 54, 53, 53),
+                //   ),
+                // ),
                 Padding(
                   padding: const EdgeInsets.only(right: 10.0),
                   child: Icon(
@@ -498,6 +552,29 @@ class _HomeScreenState extends State<HomeScreen>
                     color: _getTimeBasedIcon()['color'],
                     size: 30,
                   ),
+                ),
+                Expanded(
+                  child: Text(
+                    '${_getGreeting()}', //, ${widget.user.displayName ?? 'User'}!//
+                    style: const TextStyle(
+                      fontSize: 20,
+                      color: Colors.white,
+                      fontFamily: 'Lobster',
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+
+                IconButton(
+                  icon: const Icon(Icons.message, color: Colors.white),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) =>
+                              MessageScreen(currentUser: widget.user)),
+                    );
+                  },
                 ),
               ],
             ),
@@ -513,7 +590,7 @@ class _HomeScreenState extends State<HomeScreen>
                             child: Text('No posts available',
                                 style: TextStyle(color: Colors.white)))
                         : ListView.builder(
-                            cacheExtent: 9999,
+                            cacheExtent: 999999,
                             itemCount: _cachedPosts!.length,
                             itemBuilder: (context, index) {
                               final postId =
@@ -534,8 +611,8 @@ class _HomeScreenState extends State<HomeScreen>
                                   decoration: BoxDecoration(
                                     gradient: LinearGradient(
                                       colors: [
-                                        const Color.fromARGB(255, 15, 15, 15),
-                                        const Color.fromARGB(255, 28, 28, 28)
+                                        const Color.fromARGB(255, 21, 21, 21),
+                                        Color.fromARGB(255, 21, 21, 21)
                                       ],
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
@@ -715,188 +792,297 @@ class _HomeScreenState extends State<HomeScreen>
                                                       color:
                                                           const Color.fromARGB(
                                                                   255,
-                                                                  160,
-                                                                  160,
-                                                                  160)
+                                                                  138,
+                                                                  137,
+                                                                  137)
                                                               .withOpacity(0.2),
                                                       shape: BoxShape.circle,
                                                     ),
                                                     child: const Icon(
                                                         Icons.more_vert,
-                                                        color: Colors.white),
+                                                        color: Color.fromARGB(
+                                                            255, 0, 0, 0)),
                                                   ),
                                                 ),
                                             ],
                                           ),
-                                          Row(
+                                          Stack(
                                             children: [
-                                              FutureBuilder<String?>(
-                                                future:
-                                                    _getProfilePicUrlWithMemo(
-                                                        post['userId']),
-                                                builder: (context, snapshot) {
-                                                  return Container(
-                                                    decoration: BoxDecoration(
-                                                      color: const Color
-                                                          .fromARGB(
-                                                          163,
-                                                          227,
-                                                          226,
-                                                          226), // Background color
-                                                      shape: BoxShape.circle,
-                                                    ),
-                                                    padding: const EdgeInsets
-                                                        .all(
-                                                        2), // Padding around the avatar
-                                                    child: CircleAvatar(
-                                                      radius: 20,
-                                                      backgroundColor:
-                                                          const Color.fromARGB(
-                                                              167, 54, 53, 53),
-                                                      backgroundImage: snapshot
-                                                                  .connectionState ==
-                                                              ConnectionState
-                                                                  .waiting
-                                                          ? null
-                                                          : (snapshot.hasError ||
-                                                                  !snapshot
-                                                                      .hasData)
-                                                              ? const AssetImage(
-                                                                      'assets/images/user.png')
-                                                                  as ImageProvider
-                                                              : NetworkImage(
-                                                                  snapshot
-                                                                      .data!),
-                                                    ),
-                                                  );
-                                                },
-                                              ),
-                                              const SizedBox(width: 12),
-                                              Expanded(
-                                                child: Text(
-                                                  post['userName'] ??
-                                                      'Anonymous',
-                                                  style: const TextStyle(
-                                                      color: Colors.white,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      fontSize: 16,
-                                                      fontFamily: 'Lobster'),
-                                                ),
-                                              ),
-                                              if (post['userId'] ==
-                                                  widget.user.uid)
-                                                GestureDetector(
-                                                  onTap: () {
-                                                    showModalBottomSheet(
-                                                      context: context,
-                                                      backgroundColor:
-                                                          Colors.black,
-                                                      shape:
-                                                          const RoundedRectangleBorder(
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .vertical(
-                                                          top: Radius.circular(
-                                                              16),
+                                              Row(
+                                                children: [
+                                                  FutureBuilder<String?>(
+                                                    future:
+                                                        _getProfilePicUrlWithMemo(
+                                                            post['userId']),
+                                                    builder:
+                                                        (context, snapshot) {
+                                                      return Container(
+                                                        decoration:
+                                                            BoxDecoration(
+                                                          color: const Color
+                                                              .fromARGB(
+                                                              163,
+                                                              227,
+                                                              226,
+                                                              226), // Background color
+                                                          shape:
+                                                              BoxShape.circle,
                                                         ),
+                                                        padding: const EdgeInsets
+                                                            .all(
+                                                            2), // Padding around the avatar
+                                                        child: CircleAvatar(
+                                                          radius: 20,
+                                                          backgroundColor:
+                                                              const Color
+                                                                  .fromARGB(167,
+                                                                  54, 53, 53),
+                                                          backgroundImage: snapshot
+                                                                      .connectionState ==
+                                                                  ConnectionState
+                                                                      .waiting
+                                                              ? null
+                                                              : (snapshot.hasError ||
+                                                                      !snapshot
+                                                                          .hasData)
+                                                                  ? const AssetImage(
+                                                                          'assets/images/user.png')
+                                                                      as ImageProvider
+                                                                  : NetworkImage(
+                                                                      snapshot
+                                                                          .data!),
+                                                        ),
+                                                      );
+                                                    },
+                                                  ),
+                                                  const SizedBox(width: 12),
+                                                  Expanded(
+                                                    child: Text(
+                                                      post['userName'] ??
+                                                          'Anonymous',
+                                                      style: const TextStyle(
+                                                        color: Colors.white,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        fontSize: 16,
+                                                        fontFamily: 'Lobster',
                                                       ),
-                                                      builder: (BuildContext
-                                                          context) {
-                                                        return Column(
-                                                          mainAxisSize:
-                                                              MainAxisSize.min,
-                                                          children: [
-                                                            ListTile(
-                                                              leading:
-                                                                  Container(
-                                                                padding:
-                                                                    const EdgeInsets
-                                                                        .all(8),
-                                                                decoration:
-                                                                    BoxDecoration(
-                                                                  color: Colors
-                                                                      .white
-                                                                      .withOpacity(
-                                                                          0.2),
-                                                                  shape: BoxShape
-                                                                      .circle,
-                                                                ),
-                                                                child: Icon(
-                                                                    Icons.edit,
-                                                                    color: Colors
-                                                                        .white70),
-                                                              ),
-                                                              title: const Text(
-                                                                'Edit',
-                                                                style: TextStyle(
-                                                                    color: Colors
-                                                                        .white70),
-                                                              ),
-                                                              onTap: () {
-                                                                Navigator.pop(
-                                                                    context);
-                                                                _showEditPostDialog(
-                                                                    postId,
-                                                                    post['caption'] ??
-                                                                        '');
-                                                              },
-                                                            ),
-                                                            ListTile(
-                                                              leading:
-                                                                  Container(
-                                                                padding:
-                                                                    const EdgeInsets
-                                                                        .all(8),
-                                                                decoration:
-                                                                    BoxDecoration(
-                                                                  color: Colors
-                                                                      .redAccent
-                                                                      .withOpacity(
-                                                                          0.2),
-                                                                  shape: BoxShape
-                                                                      .circle,
-                                                                ),
-                                                                child: Icon(
-                                                                    Icons
-                                                                        .delete,
-                                                                    color: Colors
-                                                                        .redAccent),
-                                                              ),
-                                                              title: const Text(
-                                                                'Delete',
-                                                                style: TextStyle(
-                                                                    color: Colors
-                                                                        .redAccent),
-                                                              ),
-                                                              onTap: () {
-                                                                Navigator.pop(
-                                                                    context);
-                                                                _deletePost(
-                                                                    postId,
-                                                                    post['imageUrl'] ??
-                                                                        '');
-                                                              },
-                                                            ),
-                                                          ],
-                                                        );
-                                                      },
-                                                    );
-                                                  },
-                                                  child: Container(
-                                                    padding:
-                                                        const EdgeInsets.all(8),
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.white
-                                                          .withOpacity(0.2),
-                                                      shape: BoxShape.circle,
-                                                    ),
-                                                    child: const Icon(
-                                                      Icons.more_vert,
-                                                      color: Colors.white,
                                                     ),
                                                   ),
+                                                  // Show edit/delete options if the post belongs to the current user
+                                                  if (post['userId'] ==
+                                                      widget.user.uid)
+                                                    GestureDetector(
+                                                      onTap: () {
+                                                        showModalBottomSheet(
+                                                          context: context,
+                                                          backgroundColor:
+                                                              const Color
+                                                                  .fromARGB(255,
+                                                                  30, 29, 29),
+                                                          shape:
+                                                              const RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius.vertical(
+                                                                    top: Radius
+                                                                        .circular(
+                                                                            26)),
+                                                          ),
+                                                          builder: (BuildContext
+                                                              context) {
+                                                            return Column(
+                                                              mainAxisSize:
+                                                                  MainAxisSize
+                                                                      .min,
+                                                              children: [
+                                                                ListTile(
+                                                                  leading:
+                                                                      Container(
+                                                                    padding:
+                                                                        const EdgeInsets
+                                                                            .all(
+                                                                            8),
+                                                                    decoration:
+                                                                        BoxDecoration(
+                                                                      color: Colors
+                                                                          .white
+                                                                          .withOpacity(
+                                                                              0.2),
+                                                                      shape: BoxShape
+                                                                          .circle,
+                                                                    ),
+                                                                    child: const Icon(
+                                                                        Icons
+                                                                            .edit,
+                                                                        color: Colors
+                                                                            .white70),
+                                                                  ),
+                                                                  title: const Text(
+                                                                      'Edit',
+                                                                      style: TextStyle(
+                                                                          color:
+                                                                              Colors.white70)),
+                                                                  onTap: () {
+                                                                    Navigator.pop(
+                                                                        context);
+                                                                    _showEditPostDialog(
+                                                                        postId,
+                                                                        post['caption'] ??
+                                                                            '');
+                                                                  },
+                                                                ),
+                                                                ListTile(
+                                                                  leading:
+                                                                      Container(
+                                                                    padding:
+                                                                        const EdgeInsets
+                                                                            .all(
+                                                                            8),
+                                                                    decoration:
+                                                                        BoxDecoration(
+                                                                      color: Colors
+                                                                          .redAccent
+                                                                          .withOpacity(
+                                                                              0.2),
+                                                                      shape: BoxShape
+                                                                          .circle,
+                                                                    ),
+                                                                    child: const Icon(
+                                                                        Icons
+                                                                            .delete,
+                                                                        color: Colors
+                                                                            .redAccent),
+                                                                  ),
+                                                                  title: const Text(
+                                                                      'Delete',
+                                                                      style: TextStyle(
+                                                                          color:
+                                                                              Colors.redAccent)),
+                                                                  onTap: () {
+                                                                    Navigator.pop(
+                                                                        context);
+                                                                    _deletePost(
+                                                                        postId,
+                                                                        post['imageUrl'] ??
+                                                                            '');
+                                                                  },
+                                                                ),
+                                                              ],
+                                                            );
+                                                          },
+                                                        );
+                                                      },
+                                                      child: Container(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .all(8),
+                                                        decoration:
+                                                            BoxDecoration(
+                                                          color: const Color
+                                                                  .fromARGB(255,
+                                                                  255, 255, 255)
+                                                              .withOpacity(0.9),
+                                                          shape:
+                                                              BoxShape.circle,
+                                                        ),
+                                                        child: const Icon(
+                                                            Icons.more_vert,
+                                                            color:
+                                                                Color.fromARGB(
+                                                                    255,
+                                                                    0,
+                                                                    0,
+                                                                    0)),
+                                                      ),
+                                                    ),
+                                                ],
+                                              ),
+                                              Positioned(
+                                                top: 8,
+                                                right: 8,
+                                                child: FutureBuilder<bool>(
+                                                  future: _isFollowing(
+                                                      post['userId']),
+                                                  builder: (context, snapshot) {
+                                                    if (snapshot
+                                                            .connectionState ==
+                                                        ConnectionState
+                                                            .waiting) {
+                                                      ; // Loading indicator
+                                                    }
+                                                    if (snapshot.hasError ||
+                                                        !snapshot.hasData) {
+                                                      return Container(); // Handle error or no data case
+                                                    }
+                                                    final isFollowing =
+                                                        snapshot.data!;
+
+                                                    // Show follow/unfollow button only if the post is not by the current user
+                                                    if (post['userId'] ==
+                                                        widget.user.uid) {
+                                                      return Container(); // No button for own posts
+                                                    }
+
+                                                    return GestureDetector(
+                                                      onTap: () async {
+                                                        if (isFollowing) {
+                                                          await _unfollowUser(
+                                                              post['userId']);
+                                                        } else {
+                                                          await _followUser(
+                                                              post['userId']);
+                                                        }
+                                                        setState(
+                                                            () {}); // Update the state to reflect the change
+                                                      },
+                                                      child: Container(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                                horizontal: 15,
+                                                                vertical: 7),
+                                                        decoration:
+                                                            BoxDecoration(
+                                                          color: isFollowing
+                                                              ? const Color
+                                                                      .fromARGB(
+                                                                      255,
+                                                                      219,
+                                                                      5,
+                                                                      5)
+                                                                  .withOpacity(
+                                                                      0.5)
+                                                              : const Color
+                                                                      .fromARGB(
+                                                                      255,
+                                                                      94,
+                                                                      93,
+                                                                      95)
+                                                                  .withOpacity(
+                                                                      0.5),
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(10),
+                                                        ),
+                                                        child: Text(
+                                                          isFollowing
+                                                              ? 'Unfollow'
+                                                              : 'Follow',
+                                                          style:
+                                                              const TextStyle(
+                                                            fontSize: 14,
+                                                            color: Colors.white,
+                                                            fontFamily:
+                                                                'Lobster',
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    );
+                                                  },
                                                 ),
+                                              ),
                                             ],
                                           ),
                                         ],
@@ -939,7 +1125,7 @@ class _HomeScreenState extends State<HomeScreen>
                                             },
                                             child: AspectRatio(
                                               aspectRatio:
-                                                  1, // Adjust the aspect ratio as needed
+                                                  .75, // Adjust the aspect ratio as needed
                                               child: CachedNetworkImage(
                                                 imageUrl:
                                                     post['imageUrl'] ?? '',
@@ -1057,7 +1243,8 @@ class _HomeScreenState extends State<HomeScreen>
                                               padding: const EdgeInsets.all(8),
                                               decoration: BoxDecoration(
                                                 color: isSaved
-                                                    ? Colors.green
+                                                    ? const Color.fromARGB(
+                                                            255, 177, 177, 177)
                                                         .withOpacity(0.2)
                                                     : Colors.white
                                                         .withOpacity(0.2),
@@ -1068,7 +1255,8 @@ class _HomeScreenState extends State<HomeScreen>
                                                     ? Icons.bookmark
                                                     : Icons.bookmark_border,
                                                 color: isSaved
-                                                    ? Colors.green
+                                                    ? const Color.fromARGB(
+                                                        255, 255, 255, 255)
                                                     : Colors.grey,
                                               ),
                                             ),
@@ -1122,16 +1310,12 @@ class _HomeScreenState extends State<HomeScreen>
       ),
       UploadScreen(user: widget.user),
       SavedPostsScreen(user: widget.user),
+      SearchScreen(userId: widget.user.uid),
       ProfileScreen(user: widget.user),
     ];
     return Scaffold(
-      body: PageView(
-        controller: _pageController,
-        onPageChanged: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
+      body: IndexedStack(
+        index: _selectedIndex,
         children: pages,
       ),
       bottomNavigationBar: Container(
@@ -1157,21 +1341,25 @@ class _HomeScreenState extends State<HomeScreen>
           showSelectedLabels: false,
           items: const [
             BottomNavigationBarItem(
-              icon: Icon(Icons.home_filled, size: 30), // Filled home icon
+              icon: Icon(Icons.home_filled, size: 25), // Filled home icon
               label: '', // No title
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.add_circle_outline,
-                  size: 30), // Outline upload icon
+                  size: 25), // Outline upload icon
               label: '', // No title
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.bookmark_border,
-                  size: 30), // Outline bookmark icon
+                  size: 25), // Outline bookmark icon
               label: '', // No title
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline, size: 30), // Outline person icon
+              icon: Icon(Icons.search, size: 25), // Add the search icon
+              label: '',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline, size: 25), // Outline person icon
               label: '', // No title
             ),
           ],
@@ -1180,7 +1368,4 @@ class _HomeScreenState extends State<HomeScreen>
       ),
     );
   }
-
-  @override
-  bool get wantKeepAlive => true;
 }

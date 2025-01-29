@@ -328,8 +328,16 @@ class _CommentScreenState extends State<CommentScreen> {
                                               .instance.currentUser!.uid ==
                                           comment['userId'])
                                         ListTile(
-                                          leading: Icon(Icons.edit,
-                                              color: Colors.white70),
+                                          leading: Container(
+                                            padding: const EdgeInsets.all(8),
+                                            decoration: BoxDecoration(
+                                              color:
+                                                  Colors.white.withOpacity(0.2),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(Icons.edit,
+                                                color: Colors.white70),
+                                          ),
                                           title: Text('Edit',
                                               style: TextStyle(
                                                   color: Colors.white70)),
@@ -347,8 +355,17 @@ class _CommentScreenState extends State<CommentScreen> {
                                               .instance.currentUser!.uid ==
                                           comment['userId'])
                                         ListTile(
-                                          leading: Icon(Icons.delete,
-                                              color: Colors.redAccent),
+                                          leading: Container(
+                                            padding: const EdgeInsets.all(8),
+                                            decoration: BoxDecoration(
+                                              color:
+                                                  Colors.white.withOpacity(0.2),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(Icons.delete,
+                                                color: Color.fromARGB(
+                                                    179, 241, 0, 0)),
+                                          ),
                                           title: Text('Delete',
                                               style: TextStyle(
                                                   color: Colors.redAccent)),
@@ -359,8 +376,17 @@ class _CommentScreenState extends State<CommentScreen> {
                                           },
                                         ),
                                       ListTile(
-                                        leading: Icon(Icons.reply,
-                                            color: Colors.white70),
+                                        leading: Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color:
+                                                Colors.white.withOpacity(0.2),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Icon(Icons.reply,
+                                              color: Color.fromARGB(
+                                                  179, 3, 132, 48)),
+                                        ),
                                         title: Text('Reply',
                                             style: TextStyle(
                                                 color: Colors.white70)),

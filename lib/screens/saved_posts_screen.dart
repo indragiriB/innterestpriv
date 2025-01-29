@@ -29,8 +29,52 @@ class _SavedPostsScreenState extends State<SavedPostsScreen> {
   @override
   void initState() {
     super.initState();
+    _initializeListeners();
     _loadSavedPosts();
     _loadAlbumDetails();
+  }
+
+  void _initializeListeners() {
+    // Listen for album changes
+    _userAlbumRef.child(widget.user.uid).onValue.listen((event) {
+      if (event.snapshot.exists) {
+        final savedPostIds = List<String>.from(
+            event.snapshot.child('postIds').value as List<dynamic>? ?? []);
+        final Map<String, dynamic> posts = {};
+
+        Future.wait(savedPostIds.map((postId) async {
+          final postSnapshot =
+              await FirebaseDatabase.instance.ref('posts/$postId').get();
+          if (postSnapshot.exists) {
+            posts[postId] = postSnapshot.value;
+          }
+        })).then((_) async {
+          // Update saved posts in SharedPreferences
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.setStringList('savedPosts', savedPostIds);
+
+          // Update UI state
+          setState(() {
+            _savedPosts = posts;
+          });
+        });
+      } else {
+        setState(() {
+          _savedPosts = {};
+        });
+      }
+    });
+
+    // Listen for album details
+    _userAlbumRef.child(widget.user.uid).onValue.listen((event) {
+      if (event.snapshot.exists) {
+        setState(() {
+          _albumName = event.snapshot.child('albumName').value as String?;
+          _albumDescription =
+              event.snapshot.child('description').value as String?;
+        });
+      }
+    });
   }
 
   Future<void> _loadSavedPosts() async {
@@ -142,7 +186,12 @@ class _SavedPostsScreenState extends State<SavedPostsScreen> {
         children: [
           Container(
             padding: const EdgeInsets.only(
-                left: 26.0, top: 50.0, right: 16.0, bottom: 16.0),
+                left: 20.0, top: 60.0, right: 16.0, bottom: 0.0),
+            decoration: BoxDecoration(
+              color: const Color.fromARGB(
+                  196, 0, 0, 0), // Warna latar belakang berbeda
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -156,12 +205,53 @@ class _SavedPostsScreenState extends State<SavedPostsScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                GestureDetector(
-                  onTap: _editAlbumDescription,
-                  child: Text(
-                    _albumDescription ?? 'No description',
-                    style: const TextStyle(color: Colors.white),
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _albumDescription ?? 'No description',
+                        style: const TextStyle(color: Colors.white),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    ElevatedButton.icon(
+                      onPressed: _editAlbumDescription,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            const Color(0xFF1C1D1F), // Warna abu-abu gelap
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12), // Padding lebih seimbang
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                              8), // Sudut lebih kecil untuk kesan modern
+                          side: const BorderSide(
+                            color: Color(
+                                0xFF5B5B5B), // Warna abu-abu terang untuk border
+                            width: 1,
+                          ),
+                        ),
+                        elevation: 0, // Tetap tanpa bayangan
+                      ),
+                      icon: const Icon(
+                        Icons.edit,
+                        size: 16,
+                        color:
+                            Color(0xFFD9D9D9), // Ikon dengan warna abu terang
+                      ),
+                      label: const Text(
+                        'EDIT',
+                        style: TextStyle(
+                          color:
+                              Color(0xFFD9D9D9), // Teks dengan warna abu terang
+                          fontSize: 14, // Ukuran font sedikit lebih kecil
+                          fontWeight: FontWeight.w500, // Tebal font sedang
+                          fontFamily: 'Lobster',
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

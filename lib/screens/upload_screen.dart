@@ -4,12 +4,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:innterest/screens/saved_posts_screen.dart';
-import 'package:innterest/screens/profile_screen.dart';
 import 'package:innterest/screens/home_screen.dart';
 import 'dart:typed_data';
-import 'package:shimmer/shimmer.dart';
 import 'package:intl/intl.dart';
+import 'package:innterest/screens/message_screen.dart';
 
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 
@@ -22,7 +20,10 @@ class UploadScreen extends StatefulWidget {
   _UploadScreenState createState() => _UploadScreenState();
 }
 
-class _UploadScreenState extends State<UploadScreen> {
+class _UploadScreenState extends State<UploadScreen>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
   final ImagePicker _picker = ImagePicker();
   final DatabaseReference _postsRef =
       FirebaseDatabase.instance.ref().child('posts');
@@ -220,17 +221,117 @@ class _UploadScreenState extends State<UploadScreen> {
     }
   }
 
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+
+    if (hour >= 4 && hour < 10) {
+      return 'Good morning.'; // 04:00 - 09:59
+    } else if (hour >= 10 && hour < 15) {
+      return 'Good afternoon.'; // 10:00 - 14:59
+    } else if (hour >= 15 && hour < 18) {
+      return 'Good evening.'; // 15:00 - 17:59
+    } else if (hour >= 18 && hour < 22) {
+      return 'Good night.'; // 18:00 - 21:59
+    } else {
+      return 'Sleep well.'; // 22:00 - 03:59
+    }
+  }
+
+  Map<String, dynamic> _getTimeBasedIcon() {
+    final hour = DateTime.now().hour;
+
+    if (hour >= 5 && hour < 12) {
+      return {
+        'icon': Icons.wb_sunny_rounded, // Ikon matahari yang lebih jelas
+        'color':
+            Colors.orangeAccent, // Pagi - Ikon matahari dengan warna oranye
+      };
+    } else if (hour >= 12 && hour < 17) {
+      return {
+        'icon': Icons.brightness_5_rounded, // Ikon matahari cerah
+        'color': const Color.fromARGB(
+            255, 241, 159, 5), // Siang - Ikon matahari dengan warna biru terang
+      };
+    } else if (hour >= 17 && hour < 20) {
+      return {
+        'icon': Icons.wb_twilight_rounded, // Ikon senja
+        'color': Colors
+            .deepOrangeAccent, // Sore - Ikon senja dengan warna oranye tua
+      };
+    } else {
+      return {
+        'icon': Icons.nights_stay_rounded, // Ikon bulan malam
+        'color': Colors.indigo, // Malam - Ikon bulan dengan warna indigo
+      };
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Call super to maintain state
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Upload',
-          style: TextStyle(
-            fontFamily: 'Lobster',
+        toolbarHeight: 80,
+        automaticallyImplyLeading: false,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color.fromARGB(255, 21, 21, 21),
+                Color.fromARGB(255, 21, 21, 21),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
           ),
         ),
-        backgroundColor: Color.fromARGB(255, 0, 0, 0),
+        title: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 1.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              // const Padding(
+              //   padding: EdgeInsets.only(right: 10.0),
+              //   child: CircleAvatar(
+              //     backgroundImage: AssetImage('assets/images/innterest.png'),
+              //     radius: 20,
+              //     backgroundColor: Color.fromARGB(167, 54, 53, 53),
+              //   ),
+              // ),
+              Padding(
+                padding: const EdgeInsets.only(right: 10.0),
+                child: Icon(
+                  _getTimeBasedIcon()['icon'],
+                  color: _getTimeBasedIcon()['color'],
+                  size: 30,
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  'Upload Screen.', //, ${widget.user.displayName ?? 'User'}!//
+                  style: const TextStyle(
+                    fontSize: 20,
+                    color: Colors.white,
+                    fontFamily: 'Lobster',
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+
+              IconButton(
+                icon: const Icon(Icons.message, color: Colors.white),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) =>
+                            MessageScreen(currentUser: widget.user)),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
       ),
       body: Stack(
         children: [
@@ -244,26 +345,26 @@ class _UploadScreenState extends State<UploadScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            const CircleAvatar(
-                              backgroundColor: Colors.grey,
-                              radius: 20,
-                              child: Icon(Icons.person, color: Colors.white),
-                            ),
-                            const SizedBox(width: 10),
-                            Text(
-                              widget.user.displayName ?? 'Anonymous',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
+                        // Row(
+                        //   children: [
+                        //     const CircleAvatar(
+                        //       backgroundColor: Colors.grey,
+                        //       radius: 20,
+                        //       child: Icon(Icons.person, color: Colors.white),
+                        //     ),
+                        //     const SizedBox(width: 10),
+                        //     Text(
+                        //       widget.user.displayName ?? 'Anonymous',
+                        //       style: const TextStyle(
+                        //         color: Colors.white,
+                        //         fontWeight: FontWeight.bold,
+                        //       ),
+                        //     ),
+                        //   ],
+                        // ),
                         const SizedBox(height: 10),
                         AspectRatio(
-                          aspectRatio: 1,
+                          aspectRatio: .75,
                           child: _image != null
                               ? Image.file(
                                   _image!,
@@ -283,64 +384,87 @@ class _UploadScreenState extends State<UploadScreen> {
                                 ),
                         ),
                         const SizedBox(height: 10),
-                        Text(
-                          _captionController.text.isEmpty
-                              ? 'No caption'
-                              : _captionController.text,
-                          style: const TextStyle(color: Colors.white),
-                        ),
                       ],
                     ),
                   ),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: const Color.fromARGB(136, 47, 46, 46),
-                      borderRadius:
-                          BorderRadius.circular(8.0), // Sudut melengkung
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                    child: TextField(
-                      controller: _titleController,
-                      decoration: const InputDecoration(
-                        labelText: 'Title',
-                        labelStyle: TextStyle(
-                          color: Colors.white70,
-                          fontFamily: 'Lobster', // Gunakan font Lobster
+                  Column(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          color: const Color.fromARGB(136, 47, 46, 46),
+                          borderRadius: BorderRadius.circular(8.0),
                         ),
-                        focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.transparent),
-                        ),
-                        enabledBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.transparent),
-                        ),
-                      ),
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: const Color.fromARGB(136, 47, 46, 46),
-                      borderRadius: BorderRadius.circular(8.0),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                    child: TextField(
-                      controller: _captionController,
-                      decoration: const InputDecoration(
-                        labelText: 'Caption',
-                        labelStyle: TextStyle(
-                          color: Colors.white70,
-                          fontFamily: 'Lobster', // Gunakan font Lobster
-                        ),
-                        focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.transparent),
-                        ),
-                        enabledBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.transparent),
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.title,
+                                color: Colors.white70), // Ikon untuk Title
+                            const SizedBox(
+                                width: 8), // Spasi antara ikon dan TextField
+                            Expanded(
+                              child: TextField(
+                                controller: _titleController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Title',
+                                  labelStyle: TextStyle(
+                                    color: Colors.white70,
+                                    fontFamily:
+                                        'Lobster', // Gunakan font Lobster
+                                  ),
+                                  focusedBorder: UnderlineInputBorder(
+                                    borderSide:
+                                        BorderSide(color: Colors.transparent),
+                                  ),
+                                  enabledBorder: UnderlineInputBorder(
+                                    borderSide:
+                                        BorderSide(color: Colors.transparent),
+                                  ),
+                                ),
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      style: const TextStyle(color: Colors.white),
-                    ),
+                      const SizedBox(height: 20),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: const Color.fromARGB(136, 47, 46, 46),
+                          borderRadius: BorderRadius.circular(8.0),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.text_fields,
+                                color: Colors.white70), // Ikon untuk Caption
+                            const SizedBox(
+                                width: 8), // Spasi antara ikon dan TextField
+                            Expanded(
+                              child: TextField(
+                                controller: _captionController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Caption',
+                                  labelStyle: TextStyle(
+                                    color: Colors.white70,
+                                    fontFamily:
+                                        'Lobster', // Gunakan font Lobster
+                                  ),
+                                  focusedBorder: UnderlineInputBorder(
+                                    borderSide:
+                                        BorderSide(color: Colors.transparent),
+                                  ),
+                                  enabledBorder: UnderlineInputBorder(
+                                    borderSide:
+                                        BorderSide(color: Colors.transparent),
+                                  ),
+                                ),
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 20),
                   Row(
